@@ -67,6 +67,9 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	const f32 kVel = 250.f;
 	const f32 kJump = 550.0f;
 
+	enum Direction { kNone, kLeft, kRight, kBottom, kTop };
+	enum Character { kPerro, kRuby };
+
 	// state
 
 	f32 x = 260, y = 200, angle = 0;
@@ -85,8 +88,6 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	bool canJump = false;
 	collision::info collides;
 
-	vectorf camera(260.0f, 200.0f);
-
 	// ruby
 	state rubyCur(vectorf(560.0f, 200.0f), vectorf(0.0f, 0.0f));
 	state rubyPrev(rubyCur);
@@ -94,8 +95,17 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	vectorf rubyAcc(0, 9.8f * 150.0f);
 	collision::info rubyCollides;
 	ui32 rubyFrame = 0;
-	ui32 rubyFlip = false;
+	bool rubyFlip = false;
 	f32 rubyAnimTime = -1.0f;
+	f32 rubyAiTime = 0.0f;
+	bool rubyWillJump = false;
+	bool rubyCollided = false;
+	Direction rubyWalkDirection = kNone;
+	Direction rubyWillJumpDirection = kNone;
+
+	// camera
+	bool keySpacePressed = false;
+	Character cameraBindedTo = kPerro;
 
 	// loop
 
@@ -123,14 +133,27 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 		currentTime = newTime;
 		accumulator += frameTime;
 
-		
-
 		while (accumulator >= dt)
 		{
 			if (glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED))
 			{
 				running = false;
 			}
+
+			if (glfwGetKey(GLFW_KEY_SPACE))
+			{
+				if (!keySpacePressed)
+				{
+					keySpacePressed = true;
+					cameraBindedTo = (cameraBindedTo == kPerro ? kRuby : kPerro);
+				}
+			}
+			else
+			{
+				keySpacePressed = false;
+			}
+
+			// perro input
 
 			prevState = curState;
 
@@ -158,11 +181,75 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 			curState.position.x += curState.velocity.x * dt;
 			curState.position.y += curState.velocity.y * dt;
 
+			// ruby
+
 			rubyPrev = rubyCur;
 
-			if (rubyCollides.bottom() && rand() % 1000 < 10)
+			if (rubyCollides)
 			{
+				rubyCollided = true;
+			}
+
+			if (rubyCollides.left())
+			{
+				rubyWillJump = true;
+				rubyWillJumpDirection = rand() % 10 < 7 ? kRight : kLeft;
+			}
+			else if (rubyCollides.right())
+			{
+				rubyWillJump = true;
+				rubyWillJumpDirection = rand() % 10 < 7 ? kLeft : kRight;
+			}
+
+			if (rubyAiTime >= 1.0f)
+			{
+				rubyAiTime = 0.0f;
+				
+				if (rubyCollides.bottom() && (rand() % 100 < 40))
+				{
+					rubyCur.velocity.y = -kJump;
+				}
+
+				if (rubyWalkDirection == kNone || rubyCollided || (rand() % 100 < 10))
+				{
+					int r = rand() % 3;
+
+					if (r == 0)
+					{
+						rubyWalkDirection = kRight;
+					}
+					else if (r == 1)
+					{
+						rubyWalkDirection = kLeft;
+					}
+					else
+					{
+						rubyWalkDirection = kNone;
+					}
+				}
+			}
+
+			rubyAiTime += dt;
+
+			if (rubyCollides.bottom() && rubyWillJump)
+			{
+				rubyWillJump = false;
 				rubyCur.velocity.y = -kJump;
+				rubyWalkDirection = rubyWillJumpDirection;
+				rubyAiTime = 0.0f;
+			}
+
+			rubyCur.velocity.x = 0.0f;
+
+			if (rubyWalkDirection == kLeft)
+			{
+				rubyFlip = false;
+				rubyCur.velocity.x = -kVel;
+			}
+			else if (rubyWalkDirection == kRight)
+			{
+				rubyFlip = true;
+				rubyCur.velocity.x = kVel;
 			}
 
 			rubyCur.velocity.x += rubyAcc.x * dt;
@@ -253,7 +340,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 				if (rubyAnimTime >= 0.1f)
 				{
 					rubyFrame++;
-					if (rubyFrame > 1) rubyFrame = 1;
+					if (rubyFrame > 2) rubyFrame = 1;
 					rubyAnimTime = 0.0f;
 				}
 			}
@@ -271,20 +358,23 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 		rubyInt.position.x = round(rubyCur.position.x * alpha + rubyPrev.position.x * (1.0f - alpha));
 		rubyInt.position.y = round(rubyCur.position.y * alpha + rubyPrev.position.y * (1.0f - alpha));
 
+		const vectorf &cameraPosition = cameraBindedTo == kPerro ? intState.position : rubyInt.position;
+
 		vectorf mapOffset(
-			min(static_cast<f32>(MAP::getWidth() * MAP::getTileSize()), max(0, intState.position.x - screenSize.width / 2)),
-			min(static_cast<f32>(MAP::getHeight() * MAP::getTileSize()), max(0, intState.position.y - screenSize.height / 2))
+			min(static_cast<f32>(MAP::getWidth() * MAP::getTileSize()), max(0, cameraPosition.x - screenSize.width / 2)),
+			min(static_cast<f32>(MAP::getHeight() * MAP::getTileSize()), max(0, cameraPosition.y - screenSize.height / 2))
 		);
 
 		// render
+
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		GFX::drawGradient(0, 0, 640, 480, GFX::RGBAf(0, 0, 1, 1), GFX::RGBAf(1, 1, 1, 1));
 
 		drawMap(mapOffset);
 
-		GFX::drawTiledSprite(TX::PerroFrames, frame, intState.position.x - mapOffset.x, intState.position.y - mapOffset.y, angle, 1.0f, flip);
 		GFX::drawTiledSprite(TX::Ruby, rubyFrame, rubyInt.position.x - mapOffset.x, rubyInt.position.y - mapOffset.y, angle, 1.0f, rubyFlip);
+		GFX::drawTiledSprite(TX::PerroFrames, frame, intState.position.x - mapOffset.x, intState.position.y - mapOffset.y, angle, 1.0f, flip);
 
 		glfwSwapBuffers();
 
