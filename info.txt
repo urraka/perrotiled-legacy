@@ -1,0 +1,2 @@
+Perro on a tiled map using OpenGL and custom collision detection.
+Implements the "Fix your Timestep" kind of loop.
