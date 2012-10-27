@@ -16,6 +16,7 @@ namespace GFX
 	};
 
 	bool init(const char *title, sizei resolution, bool fullscreen = false);
+	void setResolution(sizei resolution);
 	void terminate();
 	void loadTexture(int id, int width, int height, void *bits, bool repeat);
 	void unloadTexture(int id);

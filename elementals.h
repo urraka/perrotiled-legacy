@@ -35,10 +35,10 @@ public:
 		return point2d_t<U, T>((U)x, (U)y);
 	}
 
-	/*operator bool() const
+	point2d_t<T, U> operator - (const point2d_t<T, U> &b)
 	{
-		return x || y;
-	}*/
+		return point2d_t<T, U>(x - b.x, y - b.y);
+	}
 };
 
 template<typename T> class size2d_t

@@ -44,6 +44,17 @@ namespace GFX
 		return true;
 	}
 
+	void setResolution(sizei resolution)
+	{
+		glViewport(0, 0, resolution.width, resolution.height);
+
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0, resolution.width, resolution.height, 0, 0, 1);
+		glDisable(GL_DEPTH_TEST);
+		glMatrixMode(GL_MODELVIEW);
+	}
+
 	void terminate()
 	{
 		for (int i = 0; i < TX::MAX; i++)
