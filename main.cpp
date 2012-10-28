@@ -421,8 +421,16 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 			vectorf cameraObjective = (cameraBindedTo == kPerro ? perroCur.position : rubyCur.position);
 
-			cameraObjective.x = min(max(screenSize.width / 2, cameraObjective.x), static_cast<f32>(MAP::getWidth() * MAP::getTileSize()) - screenSize.width / 2);
-			cameraObjective.y = min(max(screenSize.height / 2, cameraObjective.y), static_cast<f32>(MAP::getHeight() * MAP::getTileSize()) - screenSize.height / 2);
+			const vectorf cameraMin(static_cast<f32>(screenSize.width / 2), static_cast<f32>(screenSize.height / 2));
+			const vectorf cameraMax(static_cast<f32>(MAP::getWidth() * MAP::getTileSize()) - screenSize.width / 2, static_cast<f32>(MAP::getHeight() * MAP::getTileSize()) - screenSize.height / 2);
+
+			// keep camera within map bounds
+			cameraObjective.x = min(max(cameraMin.x, cameraObjective.x), cameraMax.x);
+			cameraObjective.y = min(max(cameraMin.y, cameraObjective.y), cameraMax.y);
+
+			// this fix is for when you resize the window
+			cameraCur.position.x = min(max(cameraMin.x, cameraCur.position.x), cameraMax.x);
+			cameraCur.position.y = min(max(cameraMin.y, cameraCur.position.y), cameraMax.y);
 
 			vectorf cameraDistance = cameraObjective - cameraCur.position;
 
