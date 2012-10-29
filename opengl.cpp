@@ -75,8 +75,8 @@ namespace GFX
 		glBindTexture(GL_TEXTURE_2D, tx);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, repeat ? GL_REPEAT : GL_CLAMP);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, repeat ? GL_REPEAT : GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, bits);
 	}
 
@@ -121,7 +121,7 @@ namespace GFX
 		glEnd();
 	}
 
-	void drawTiledSprite(int id, int tileIndex, float x, float y, float angle, float size, bool flipX)
+	void drawTiledSprite(int id, int tileIndex, float x, float y, float angle, float size, bool flipX, bool flipY)
 	{
 		TX::sprite &s = TX::sprites[id];
 
@@ -142,6 +142,13 @@ namespace GFX
 			f32 tmp = tx0.x;
 			tx0.x = tx1.x;
 			tx1.x = tmp;
+		}
+
+		if (flipY)
+		{
+			f32 tmp = tx0.y;
+			tx0.y = tx1.y;
+			tx1.y = tmp;
 		}
 
 		glBindTexture(GL_TEXTURE_2D, textures[id]);
@@ -167,20 +174,33 @@ namespace GFX
 		glEnd();
 	}
 
-	void drawGradient(float x, float y, float width, float height, RGBAf startColor, RGBAf endColor)
+	void drawGradient(float x, float y, float width, float height, RGBAf startColor, RGBAf endColor, bool isHorizontal)
 	{
 		glDisable(GL_TEXTURE_2D);
 		glLoadIdentity();
 
 		glBegin(GL_QUADS);
 
-		glColor4f(startColor.R, startColor.G, startColor.B, startColor.A);
-		glVertex2f(x, y);
-		glVertex2f(x + width, y);
+		if (isHorizontal)
+		{
+			glColor4f(startColor.R, startColor.G, startColor.B, startColor.A);
+			glVertex2f(x, y);
+			glVertex2f(x, y + height);
 
-		glColor4f(endColor.R, endColor.G, endColor.B, endColor.A);
-		glVertex2f(x + width, y + height);
-		glVertex2f(x, y + height);
+			glColor4f(endColor.R, endColor.G, endColor.B, endColor.A);
+			glVertex2f(x + width, y + height);
+			glVertex2f(x + width, y);
+		}
+		else
+		{
+			glColor4f(startColor.R, startColor.G, startColor.B, startColor.A);
+			glVertex2f(x, y);
+			glVertex2f(x + width, y);
+
+			glColor4f(endColor.R, endColor.G, endColor.B, endColor.A);
+			glVertex2f(x + width, y + height);
+			glVertex2f(x, y + height);
+		}
 
 		glEnd();
 

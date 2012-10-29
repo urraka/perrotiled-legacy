@@ -4,6 +4,30 @@ namespace TX
 {
 	enum { PerroFrames = 0, Ruby, Ground, MAX };
 
+	enum Shadows
+	{
+		kShadowNone = 0,
+		kShadowL,
+		kShadowT,
+		kShadowTL,
+		kShadowLR,
+		kShadowTB,
+		kShadowTLR,
+		kShadowTLB,
+		kShadowTLBR,
+		kShadowTl,
+		kShadowTlR,
+		kShadowTlB,
+		kShadowTlRB,
+		kShadowTlBr,
+		kShadowTlTr,
+		kShadowTlBl,
+		kShadowTlTrB,
+		kShadowTlBlR,
+		kShadowTlBlTr,
+		kShadowTlBlTrBr
+	};
+
 	struct sprite
 	{
 		sizei size;

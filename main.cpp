@@ -49,6 +49,7 @@ namespace collision
 sizei *g_screenSize = 0;
 
 void drawMap(vectorf offset);
+int chooseTile(int x, int y, bool &flipX, bool &flipY);
 rectf boundingBox(i32 sprite_id, const pointf &pos);
 bool map_collision(state &prevState, state &curState, recti box, collision::info &collides);
 void GLFWCALL windowResize(int width, int height);
@@ -68,7 +69,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	MAP::load("res\\map.png");
 	TX::load(TX::PerroFrames, "res\\perro_frames2.png", pointi(26, 79), sizei(52, 80));
 	TX::load(TX::Ruby, "res\\ruby.png", pointi(26, 79), sizei(52, 80));
-	TX::load(TX::Ground, "res\\ground2.png", pointi(), sizei(), true);
+	TX::load(TX::Ground, "res\\map_ground.png", pointi(0, 0), sizei(32, 32), false);
 
 	// constants
 
@@ -630,16 +631,167 @@ rectf boundingBox(i32 sprite_id, const pointf &pos)
 
 void drawMap(vectorf offset)
 {
-	i32 tileSize = MAP::getTileSize();
+	f32 tileSize = static_cast<f32>(MAP::getTileSize());
 
-	for (i32 y = 0; y < MAP::getHeight(); y++)
+	i32 w = MAP::getWidth();
+	i32 h = MAP::getHeight();
+
+	i32 x0 = static_cast<i32>(floor(offset.x / tileSize));
+	i32 y0 = static_cast<i32>(floor(offset.y / tileSize));
+	i32 x1 = static_cast<i32>(floor((offset.x + g_screenSize->width) / tileSize));
+	i32 y1 = static_cast<i32>(floor((offset.y + g_screenSize->height) / tileSize));
+
+	for (i32 y = y0; y <= y1; y++)
 	{
-		for (i32 x = 0; x < MAP::getWidth(); x++)
+		for (i32 x = x0; x <= x1; x++)
 		{
 			if (MAP::getTile(x, y))
 			{
-				GFX::drawSprite(TX::Ground, (f32)x * tileSize - offset.x, (f32)y * tileSize - offset.y);
+				vectorf pos(static_cast<f32>(x) * tileSize - offset.x, static_cast<f32>(y) * tileSize - offset.y);
+
+				bool flipX, flipY;
+
+				i32 idx = chooseTile(x, y, flipX, flipY);
+
+				GFX::drawTiledSprite(TX::Ground, idx, pos.x, pos.y, 0, 1.0f, flipX, flipY);
 			}
 		}
+	}
+}
+
+int chooseTile(int x, int y, bool &flipX, bool &flipY)
+{
+	enum { kTop = 0, kRight, kBottom, kLeft, kTopLeft, kTopRight, kBottomRight, kBottomLeft };
+
+	const i32 w = MAP::getWidth();
+	const i32 h = MAP::getHeight();
+
+	const bool isOutsideTile = true;
+
+	bool tile[8] = {};
+	bool shadow[8] = {};
+	int nInnerCorners = 0;
+	int nSideShadows = 0;
+
+	tile[kTop]    = (y > 0 ? MAP::getTile(x, y - 1) != 0 : isOutsideTile);
+	tile[kRight]  = (x < w ? MAP::getTile(x + 1, y) != 0 : isOutsideTile);
+	tile[kBottom] = (y < h ? MAP::getTile(x, y + 1) != 0 : isOutsideTile);
+	tile[kLeft]   = (x > 0 ? MAP::getTile(x - 1, y) != 0 : isOutsideTile);
+
+	tile[kTopLeft]     = (x > 0 && y > 0 ? MAP::getTile(x - 1, y - 1) != 0 : isOutsideTile);
+	tile[kTopRight]    = (x < w && y > 0 ? MAP::getTile(x + 1, y - 1) != 0 : isOutsideTile);
+	tile[kBottomRight] = (x < w && y < h ? MAP::getTile(x + 1, y + 1) != 0 : isOutsideTile);
+	tile[kBottomLeft]  = (x > 0 && y < h ? MAP::getTile(x - 1, y + 1) != 0 : isOutsideTile);
+
+	shadow[kTop]    = !tile[kTop];
+	shadow[kRight]  = !tile[kRight];
+	shadow[kBottom] = !tile[kBottom];
+	shadow[kLeft]   = !tile[kLeft];
+
+	shadow[kTopLeft]     = tile[kTop]    && tile[kLeft]  && !tile[kTopLeft];
+	shadow[kTopRight]    = tile[kTop]    && tile[kRight] && !tile[kTopRight];
+	shadow[kBottomLeft]  = tile[kBottom] && tile[kLeft]  && !tile[kBottomLeft];
+	shadow[kBottomRight] = tile[kBottom] && tile[kRight] && !tile[kBottomRight];
+
+	for (int i = kTop; i <= kLeft; i++)
+	{
+		if (shadow[i]) nSideShadows++;
+	}
+
+	for (int i = kTopLeft; i <= kBottomLeft; i++)
+	{
+		if (shadow[i]) nInnerCorners++;
+	}
+
+
+	flipX = false;
+	flipY = false;
+
+	if (nInnerCorners == 0)
+	{
+		if (nSideShadows == 0)
+		{
+			return TX::kShadowNone;
+		}
+		else if (nSideShadows == 1)
+		{
+			flipX = shadow[kRight];
+			flipY = shadow[kBottom];
+
+			if (shadow[kLeft] || shadow[kRight])
+			{
+				return TX::kShadowL;
+			}
+
+			return TX::kShadowT;
+		}
+		else if (nSideShadows == 2)
+		{
+			bool isAdjacent = (shadow[kTop] && (shadow[kLeft] || shadow[kRight]) || shadow[kBottom] && (shadow[kLeft] || shadow[kRight]));
+
+			if (isAdjacent)
+			{
+				if (shadow[kRight]) flipX = true;
+				if (shadow[kBottom]) flipY = true;
+
+				return TX::kShadowTL;
+			}
+			else
+			{
+				if (shadow[kLeft]) return TX::kShadowLR;
+
+				return TX::kShadowTB;
+			}
+		}
+		else if (nSideShadows == 3)
+		{
+			if (!shadow[kLeft]) flipX = true;
+			if (!shadow[kTop]) flipY = true;
+			
+			if (!shadow[kTop] || !shadow[kBottom]) return TX::kShadowTLR;
+
+			return TX::kShadowTLB;
+		}
+		else
+		{
+			return TX::kShadowTLBR;
+		}
+	}
+	else if (nInnerCorners == 1)
+	{
+		flipX = shadow[kTopRight] || shadow[kBottomRight];
+		flipY = shadow[kBottomLeft] || shadow[kBottomRight];
+
+		if (nSideShadows == 0) return TX::kShadowTl;
+		if (nSideShadows == 2) return TX::kShadowTlRB;
+		if (nSideShadows == 1 && (shadow[kLeft] || shadow[kRight])) return TX::kShadowTlR;
+
+		return TX::kShadowTlB;
+	}
+	else if (nInnerCorners == 2)
+	{
+		if (shadow[kTopLeft] && shadow[kBottomRight] || shadow[kBottomLeft] && shadow[kTopRight])
+		{
+			flipX = shadow[kTopRight];
+
+			return TX::kShadowTlBr;
+		}
+
+		flipX = flipY = shadow[kBottomRight];
+			
+		if (shadow[kTopLeft] && shadow[kTopRight] || shadow[kBottomLeft] && shadow[kBottomRight]) return TX::kShadowTlTr + (nSideShadows == 1 ? 2 : 0);
+
+		return TX::kShadowTlBl + (nSideShadows == 1 ? 2 : 0);
+	}
+	else if (nInnerCorners == 3)
+	{
+		flipX = !shadow[kBottomLeft] || !shadow[kTopLeft];
+		flipY = !shadow[kTopLeft] || !shadow[kTopRight];
+
+		return TX::kShadowTlBlTr;
+	}
+	else
+	{
+		return TX::kShadowTlBlTrBr;
 	}
 }

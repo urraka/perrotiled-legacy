@@ -1,0 +1,98 @@
+Tile shadows:
+
+- Para innerCorners = 0
+  - Quedan solo Top, Left, Bottom, Right = 4 bits = 16 posibilidades
+
+- Para innerCorners = 1
+  - Dada una innerCorner quedan las siguientes posibilidades:
+    - Es la unica sombra
+    - Alguno de los lados opuestos tiene sombra (2 lados posibles)
+    - Ambos lados opuestos tienen sombra
+  - Hay 4 innerCorners posibles y por cada una 4 posibilidades = 4 x 4 = 16 posibilidades
+
+- Para innerCorners = 2
+  - Las innerCorners son opuestas: 2 posibilidades
+  - Las innerCorners son adyacentes: 4 posibilidades
+    - Por cada una quedan las siguientes posibilidades:
+      - El lado opuesto tiene sombra
+      - El lado opuesto no tiene sombra
+  - Total de posibilidades = 2 + 4 x 2 = 10
+
+- Para innerCorners = 3
+  - Hay 4 posibilidades determinadas por la esquina que no tiene sombra
+
+- Para innerCorners = 4
+  - Solo 1 posibilidad
+
+
+Total de posibilidades = 16 + 16 + 10 + 4 + 1 = 47
+
+
+
+Excluyendo rotadas:
+
+- innerCorners = 0
+  - ningun lado
+  - 1 solo lado
+  - 2 lados adyacentes
+  - 2 lados opuestos
+  - 3 lados
+  - 4 lados
+  - posibilidades = 6
+
+- innerCorners = 1
+  - se reduce a considerar una sola esquina, lo cual da posibilidades = 4
+
+- innerCorners = 2
+  - esquinas opuestas
+  - adyacentes sin otra sombra
+  - adyacentes con sombra en el lado opuesto
+  - posibilidades = 3
+
+- innerCorners = 3
+  - posibilidades = 1
+
+- innerCorners = 4
+  - posibilidades = 1
+
+Total: 6 + 4 + 3 + 1 + 1 = 15
+
+
+----------------------------------------------------------------------------------
+
+- innerCorners = 0:
+  - 4 bits
+
+- innerCorners = 1:
+  - 2 bits para definir cual es la innerCorner
+  - 2 bits para definir que lados opuestos tienen sombra o no
+
+
+
+
+
+0: no shadow
+1: left
+2: top
+3: top + left
+4: left + right
+5: top + bottom
+6: top + left + right
+7: left + top + bottom
+8: top + left + bottom + right
+9: topLeft corner
+10: topLeft corner + right
+11: topLeft corner + bottom
+12: topLeft corner + right + bottom
+13: topLeft corner + bottomRight corner
+14: topLeft corner + topRight corner
+15: topLeft corner + bottomLeft corner
+16: topLeft corner + topRight corner + bottom
+17: topLeft corner + bottomLeft corner + right
+18: topLeft corner + bottomLeft corner + topRight corner
+19: topLeft corner + bottomLeft corner + topRight corner + bottomRight corner
+
+
+
+
+
