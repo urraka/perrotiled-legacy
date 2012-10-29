@@ -56,7 +56,7 @@ void GLFWCALL windowResize(int width, int height);
 
 int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __in LPSTR lpCmdLine, __in int nCmdShow)
 {
-	sizei screenSize(800, 600);
+	sizei screenSize(1024, 768);
 	g_screenSize = &screenSize;
 
 	if (!GFX::init("perrotiled", screenSize, false))
@@ -76,6 +76,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	const f32 kVel = 250.f;
 	const f32 kJump = 550.0f;
 	const f32 g = 9.8f * 150.0f;
+	const f32 kMaxKickedTime = 1.5f;
 
 	enum Direction { kNone, kLeft, kRight, kBottom, kTop };
 	enum Character { kPerro, kRuby };
@@ -90,7 +91,11 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	ui32 perroFrame = 0;
 	bool perroFlip = false;
 	f32 perroAnimTime = -1.0f;
-	bool keyCtrlPressed = false;
+	f64 perroKickTime = -1.0f;
+	bool perroIsKicking = false;
+	f32 perroKickedTime = kMaxKickedTime + 1.0f;
+	bool perroKicked = false;
+	vectorf perroKickedVel;
 
 	// ruby
 
@@ -107,19 +112,24 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	bool rubyCollided = false;
 	Direction rubyWalkDirection = kNone;
 	Direction rubyWillJumpDirection = kNone;
+	f64 rubyKickTime = -1.0f;
+	bool rubyIsKicking = false;
+	f32 rubyKickedTime = kMaxKickedTime + 1.0f;
 	bool rubyKicked = false;
-	f32 rubyKickedTime = 0.0f;
 	vectorf rubyKickedVel;
-	vectorf rubyKickedForce;
 
 	// camera
 
-	bool keySpacePressed = false;
 	Character cameraBindedTo = kPerro;
 	state cameraCur(vectorf(static_cast<f32>(screenSize.width / 2), static_cast<f32>(screenSize.height / 2)), vectorf(0.0f, 0.0f));
 	state cameraPrev(cameraCur);
 	state cameraInt;
 	vectorf cameraAcc;
+
+	// input
+
+	bool keyCtrlPressed = false;
+	bool keySpacePressed = false;
 
 	// loop
 
@@ -174,50 +184,93 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 			perroPrev = perroCur;
 
-			perroCur.velocity.x = 0.0f;
-
-			if (perroCollides.bottom() && glfwGetKey(GLFW_KEY_UP))
+			if (perroKickedTime > kMaxKickedTime)
 			{
-				perroCur.velocity.y = -kJump;
-			}
+				perroCur.velocity.x = 0.0f;
 
-			if (glfwGetKey(GLFW_KEY_LEFT))
-			{
-				perroFlip = false;
-				perroCur.velocity.x = -kVel;
-			}
-
-			if (glfwGetKey(GLFW_KEY_RIGHT))
-			{
-				perroFlip = true;
-				perroCur.velocity.x = kVel;
-			}
-
-			if (glfwGetKey(GLFW_KEY_LCTRL))
-			{
-				if (!keyCtrlPressed)
+				if (perroCollides.bottom() && glfwGetKey(GLFW_KEY_UP))
 				{
-					rectf rcPerro = boundingBox(TX::PerroFrames, perroCur.position);
-					rectf rcRuby = boundingBox(TX::Ruby, rubyCur.position);
+					perroCur.velocity.y = -kJump;
+				}
 
-					if (rcPerro.intersects(rcRuby))
+				if (!perroIsKicking || !perroCollides.bottom())
+				{
+					if (glfwGetKey(GLFW_KEY_LEFT))
 					{
-						rubyKicked = true;
-						rubyKickedTime = 0.0f;
-						rubyKickedVel = vectorf(-500.0f, -200.0f);
+						perroFlip = false;
+						perroCur.velocity.x = -kVel;
+					}
 
-						if (perroFlip)
-						{
-							rubyKickedVel.x = -rubyKickedVel.x;
-						}
+					if (glfwGetKey(GLFW_KEY_RIGHT))
+					{
+						perroFlip = true;
+						perroCur.velocity.x = kVel;
 					}
 				}
 
-				keyCtrlPressed = true;
+				if (glfwGetKey(GLFW_KEY_LCTRL) || glfwGetKey(GLFW_KEY_RCTRL))
+				{
+					if (!keyCtrlPressed)
+					{
+						perroIsKicking = true;
+						perroKickTime = t;
+
+						rectf rcPerro = boundingBox(TX::PerroFrames, perroCur.position);
+						rectf rcRuby = boundingBox(TX::Ruby, rubyCur.position);
+
+						if (rcPerro.intersects(rcRuby))
+						{
+							rubyKicked = true;
+							rubyKickedTime = 0.0f;
+							rubyKickedVel = vectorf(-300.0f, -500.0f);
+
+							if (perroFlip)
+							{
+								rubyKickedVel.x = -rubyKickedVel.x;
+							}
+						}
+					}
+
+					keyCtrlPressed = true;
+				}
+				else
+				{
+					keyCtrlPressed = false;
+				}
 			}
-			else
+			else if (perroCollides.bottom())
 			{
-				keyCtrlPressed = false;
+				perroKickedVel.x = perroKickedVel.x * 0.99;
+			}
+
+			if (perroCollides.right() || perroCollides.left())
+			{
+				perroKickedTime = kMaxKickedTime + 1.0f;
+			}
+
+			if (perroIsKicking && perroCollides.bottom())
+			{
+				perroCur.velocity.x = 0;
+				perroCur.velocity.y = 0;
+			}
+
+			if (perroIsKicking && (t - perroKickTime) > 0.1)
+			{
+				perroIsKicking = false;
+			}
+
+			if (perroKickedTime < kMaxKickedTime)
+			{
+				perroIsKicking = false;
+
+				if (perroKicked)
+				{
+					perroCur.velocity.y = perroKickedVel.y;
+					perroKicked = false;
+				}
+
+				perroCur.velocity.x = perroKickedVel.x;				
+				perroKickedTime += dt;
 			}
 
 			perroCur.velocity.x += perroAcc.x * dt;
@@ -234,88 +287,118 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 				rubyCollided = true;
 			}
 
-			if (rubyCollides.right())
+			if (rubyKickedTime > kMaxKickedTime)
 			{
-				rubyWillJump = true;
-				rubyWillJumpDirection = rand() % 10 < 7 ? kRight : kLeft;
+				rectf rcPerro = boundingBox(TX::PerroFrames, perroCur.position);
+				rectf rcRuby = boundingBox(TX::Ruby, rubyCur.position);
 
-				if (rubyKickedTime <= 1.0f && rubyKickedVel.x > 0.0f)
+				if (rcPerro.intersects(rcRuby) && (rand() % 100) < 1) // TODO: add timer to this
 				{
-					rubyKickedTime = 2.0f;
-				}
-			}
-			else if (rubyCollides.left())
-			{
-				rubyWillJump = true;
-				rubyWillJumpDirection = rand() % 10 < 7 ? kLeft : kRight;
+					rubyIsKicking = true;
+					rubyKickTime = t;
 
-				if (rubyKickedTime <= 1.0f && rubyKickedVel.x < 0.0f)
+					perroKicked = true;
+					perroKickedTime = 0.0f;
+					perroKickedVel = vectorf(-300.0f, -500.0f);
+
+					if (rubyFlip)
+					{
+						perroKickedVel.x = -perroKickedVel.x;
+					}
+				}
+
+				if (rubyCollides.right())
 				{
-					rubyKickedTime = 2.0f;
+					rubyWillJump = true;
+					rubyWillJumpDirection = rand() % 10 < 7 ? kRight : kLeft;
+					rubyKickedTime = kMaxKickedTime + 1.0f;
 				}
-			}
+				else if (rubyCollides.left())
+				{
+					rubyWillJump = true;
+					rubyWillJumpDirection = rand() % 10 < 7 ? kLeft : kRight;
+					rubyKickedTime = kMaxKickedTime + 1.0f;
+				}
 
-			if (rubyAiTime >= 1.0f)
-			{
-				rubyAiTime = 0.0f;
+				if (rubyAiTime >= 1.0f && !rubyIsKicking)
+				{
+					rubyAiTime = 0.0f;
 				
-				if (rubyCollides.bottom() && (rand() % 100 < 40))
+					if (rubyCollides.bottom() && (rand() % 100 < 20))
+					{
+						rubyCur.velocity.y = -kJump;
+					}
+
+					if (rubyWalkDirection == kNone || rubyCollided || (rand() % 100 < 10))
+					{
+						int r = rand() % 3;
+
+						if (r == 0)
+						{
+							rubyWalkDirection = kRight;
+						}
+						else if (r == 1)
+						{
+							rubyWalkDirection = kLeft;
+						}
+						else
+						{
+							rubyWalkDirection = kNone;
+						}
+					}
+				}
+
+				rubyAiTime += dt;
+
+				if (rubyCollides.bottom() && rubyWillJump)
 				{
+					rubyWillJump = false;
 					rubyCur.velocity.y = -kJump;
+					rubyWalkDirection = rubyWillJumpDirection;
+					rubyAiTime = 0.0f;
 				}
 
-				if (rubyWalkDirection == kNone || rubyCollided || (rand() % 100 < 10))
+				rubyCur.velocity.x = 0.0f;
+
+				if (rubyWalkDirection == kLeft)
 				{
-					int r = rand() % 3;
-
-					if (r == 0)
-					{
-						rubyWalkDirection = kRight;
-					}
-					else if (r == 1)
-					{
-						rubyWalkDirection = kLeft;
-					}
-					else
-					{
-						rubyWalkDirection = kNone;
-					}
+					rubyFlip = false;
+					rubyCur.velocity.x = -kVel;
+				}
+				else if (rubyWalkDirection == kRight)
+				{
+					rubyFlip = true;
+					rubyCur.velocity.x = kVel;
 				}
 			}
-
-			rubyAiTime += dt;
-
-			if (rubyCollides.bottom() && rubyWillJump)
+			else
 			{
-				rubyWillJump = false;
-				rubyCur.velocity.y = -kJump;
-				rubyWalkDirection = rubyWillJumpDirection;
-				rubyAiTime = 0.0f;
-			}
+				if (rubyCollides.bottom())
+				{
+					rubyKickedVel.x = rubyKickedVel.x * 0.99;
+				}
 
-			rubyCur.velocity.x = 0.0f;
+				rubyIsKicking = false;
 
-			if (rubyWalkDirection == kLeft)
-			{
-				rubyFlip = false;
-				rubyCur.velocity.x = -kVel;
-			}
-			else if (rubyWalkDirection == kRight)
-			{
-				rubyFlip = true;
-				rubyCur.velocity.x = kVel;
-			}
+				if (rubyKicked)
+				{
+					rubyCur.velocity.y = rubyKickedVel.y;
+					rubyKicked = false;
+				}
 
-			if (rubyKicked)
-			{
-				rubyCur.velocity.y = rubyKickedVel.y;
-				rubyKicked = false;
-			}
-
-			if (rubyKickedTime <= 1.0f)
-			{
 				rubyCur.velocity.x = rubyKickedVel.x;				
 				rubyKickedTime += dt;
+			}
+
+			if (rubyIsKicking && rubyCollides.bottom())
+			{
+				rubyCur.velocity.x = 0;
+				rubyCur.velocity.y = 0;
+			}
+
+			if (rubyIsKicking && (t - rubyKickTime) > 0.1 || rubyKickedTime < kMaxKickedTime)
+			{
+				rubyIsKicking = false;
 			}
 
 			rubyCur.velocity.x += rubyAcc.x * dt;
@@ -343,6 +426,8 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 			{
 				map_collision(prev, perroCur, rc, perroCollides);
 			}
+
+			// perro frame selection
 
 			if (perroCur.velocity.x == 0.0f && perroCollides.bottom())
 			{
@@ -372,6 +457,11 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 				}
 			}
 
+			if (perroIsKicking)
+			{
+				perroFrame = 3;
+			}
+
 			// ruby collision check
 
 			rubyCollides.reset();
@@ -387,6 +477,8 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 			{
 				map_collision(prev, rubyCur, rc, rubyCollides);
 			}
+
+			// ruby frame selection
 
 			if (rubyCur.velocity.x == 0.0f && rubyCollides.bottom())
 			{
@@ -414,6 +506,11 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 					if (rubyFrame > 2) rubyFrame = 1;
 					rubyAnimTime = 0.0f;
 				}
+			}
+
+			if (rubyIsKicking)
+			{
+				rubyFrame = 3;
 			}
 
 			// camera
