@@ -422,6 +422,8 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 			vectorf cameraObjective = (cameraBindedTo == kPerro ? perroCur.position : rubyCur.position);
 
+			//cameraObjective.x += 100.0f * (cameraBindedTo == kPerro ? (perroFlip ? 1.0 : -1.0f) : (rubyFlip ? 1.0f : -1.0f));
+
 			const vectorf cameraMin(static_cast<f32>(screenSize.width / 2), static_cast<f32>(screenSize.height / 2));
 			const vectorf cameraMax(static_cast<f32>(MAP::getWidth() * MAP::getTileSize()) - screenSize.width / 2, static_cast<f32>(MAP::getHeight() * MAP::getTileSize()) - screenSize.height / 2);
 
@@ -435,15 +437,15 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 			vectorf cameraDistance = cameraObjective - cameraCur.position;
 
-			cameraCur.velocity.x = cameraDistance.x * 2.0f;
-			cameraCur.velocity.y = cameraDistance.y * 2.0f;
+			cameraCur.velocity.x = cameraDistance.x * 2.5f;
+			cameraCur.velocity.y = cameraDistance.y * 2.5f;
 
-			if (abs(cameraCur.velocity.x) < 15.0f)
+			if (abs(cameraCur.velocity.x) < 20.0f)
 			{
 				cameraCur.velocity.x = 0.0f;
 			}
 
-			if (abs(cameraCur.velocity.y) < 15.0f)
+			if (abs(cameraCur.velocity.y) < 20.0f)
 			{
 				cameraCur.velocity.y = 0.0f;
 			}
@@ -462,16 +464,50 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 		// frame interpolation
 
-		const f32 alpha = (f32)(accumulator / dt);
+		const f32 alpha = static_cast<f32>(accumulator / static_cast<f64>(dt));
 
-		perroInt.position.x = round(perroCur.position.x * alpha + perroPrev.position.x * (1.0f - alpha));
-		perroInt.position.y = round(perroCur.position.y * alpha + perroPrev.position.y * (1.0f - alpha));
+		perroInt.position.x = floorf(perroCur.position.x * alpha + perroPrev.position.x * (1.0f - alpha));
+		perroInt.position.y = floorf(perroCur.position.y * alpha + perroPrev.position.y * (1.0f - alpha));
 
-		rubyInt.position.x = round(rubyCur.position.x * alpha + rubyPrev.position.x * (1.0f - alpha));
-		rubyInt.position.y = round(rubyCur.position.y * alpha + rubyPrev.position.y * (1.0f - alpha));
+		rubyInt.position.x = floorf(rubyCur.position.x * alpha + rubyPrev.position.x * (1.0f - alpha));
+		rubyInt.position.y = floorf(rubyCur.position.y * alpha + rubyPrev.position.y * (1.0f - alpha));
 
-		cameraInt.position.x = round(cameraCur.position.x * alpha + cameraPrev.position.x * (1.0f - alpha));
-		cameraInt.position.y = round(cameraCur.position.y * alpha + cameraPrev.position.y * (1.0f - alpha));
+		cameraInt.position.x = floorf(cameraCur.position.x * alpha + cameraPrev.position.x * (1.0f - alpha));
+		cameraInt.position.y = floorf(cameraCur.position.y * alpha + cameraPrev.position.y * (1.0f - alpha));
+
+
+		/*
+		// frame interpolation with no floor
+
+		perroInt.position.x = (perroCur.position.x * alpha + perroPrev.position.x * (1.0f - alpha));
+		perroInt.position.y = (perroCur.position.y * alpha + perroPrev.position.y * (1.0f - alpha));
+
+		rubyInt.position.x = (rubyCur.position.x * alpha + rubyPrev.position.x * (1.0f - alpha));
+		rubyInt.position.y = (rubyCur.position.y * alpha + rubyPrev.position.y * (1.0f - alpha));
+
+		cameraInt.position.x = (cameraCur.position.x * alpha + cameraPrev.position.x * (1.0f - alpha));
+		cameraInt.position.y = (cameraCur.position.y * alpha + cameraPrev.position.y * (1.0f - alpha));
+		*/
+
+		/*
+		// no interpolation
+
+		perroInt.position.x = floorf(perroCur.position.x);
+		perroInt.position.y = floorf(perroCur.position.y);
+		rubyInt.position.x = floorf(rubyCur.position.x);
+		rubyInt.position.y = floorf(rubyCur.position.y);
+		cameraInt.position.x = floorf(cameraCur.position.x);
+		cameraInt.position.y = floorf(cameraCur.position.y);
+
+		// no interpolation & no floor
+
+		perroInt.position.x = (perroCur.position.x);
+		perroInt.position.y = (perroCur.position.y);
+		rubyInt.position.x = (rubyCur.position.x);
+		rubyInt.position.y = (rubyCur.position.y);
+		cameraInt.position.x = (cameraCur.position.x);
+		cameraInt.position.y = (cameraCur.position.y);
+		*/
 
 		// render
 
@@ -636,10 +672,10 @@ void drawMap(vectorf offset)
 	i32 w = MAP::getWidth();
 	i32 h = MAP::getHeight();
 
-	i32 x0 = static_cast<i32>(floor(offset.x / tileSize));
-	i32 y0 = static_cast<i32>(floor(offset.y / tileSize));
-	i32 x1 = static_cast<i32>(floor((offset.x + g_screenSize->width) / tileSize));
-	i32 y1 = static_cast<i32>(floor((offset.y + g_screenSize->height) / tileSize));
+	i32 x0 = max(0, static_cast<i32>(floor(offset.x / tileSize)));
+	i32 y0 = max(0, static_cast<i32>(floor(offset.y / tileSize)));
+	i32 x1 = min(w, static_cast<i32>(floor((offset.x + g_screenSize->width) / tileSize)));
+	i32 y1 = min(h, static_cast<i32>(floor((offset.y + g_screenSize->height) / tileSize)));
 
 	for (i32 y = y0; y <= y1; y++)
 	{
