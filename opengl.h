@@ -24,4 +24,5 @@ namespace GFX
 	void drawTiledSprite(int id, int tileIndex, float x, float y, float angle = 0, float size = 1.0f, bool flipX = false, bool flipY = false);
 	void drawGradient(float x, float y, float width, float height, RGBAf startColor, RGBAf endColor, bool isHorizontal = false);
 	void renderObjects();
+	void screenshot();
 }

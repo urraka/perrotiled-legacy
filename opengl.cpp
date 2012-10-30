@@ -210,4 +210,18 @@ namespace GFX
 	void renderObjects()
 	{
 	}
+
+	void screenshot()
+	{
+		GLint params[4];
+		glGetIntegerv(GL_VIEWPORT, params);
+
+		GLubyte *data = new GLubyte[3 * params[2] * params[3]];
+
+		glReadPixels(params[0], params[1], params[2], params[3], GL_RGB, GL_UNSIGNED_BYTE, data);
+
+		TX::saveImage("screenshot.png", params[2], params[3], data);
+
+		delete[] data;
+	}
 }

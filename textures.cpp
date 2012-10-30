@@ -66,4 +66,31 @@ namespace TX
 
 		return true;
 	}
+
+	void saveImage(const char *filename, int width, int height, ui8 *data)
+	{
+		FIBITMAP *image = FreeImage_Allocate(width, height, 24);
+
+		if (image)
+		{
+			RGBQUAD color;
+
+			for (int x = 0; x < width; x++)
+			{
+				for (int y = 0; y < height; y++)
+				{
+					int i = (y * width + x) * 3;
+
+					color.rgbRed = data[i + 0];
+					color.rgbGreen = data[i + 1];
+					color.rgbBlue = data[i + 2];
+
+					FreeImage_SetPixelColor(image, x, y, &color);
+				}
+			}
+
+			FreeImage_Save(FIF_PNG, image, filename);
+			FreeImage_Unload(image);
+		}
+	}
 }

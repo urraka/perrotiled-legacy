@@ -37,5 +37,7 @@ namespace TX
 
 	bool load(int id, const char *filename, pointi origin = pointi(), sizei tileSize = sizei(), bool repeat = false);
 
+	void saveImage(const char *filename, int width, int height, ui8 *data);
+
 	extern sprite sprites[TX::MAX];
 }

@@ -56,7 +56,7 @@ void GLFWCALL windowResize(int width, int height);
 
 int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __in LPSTR lpCmdLine, __in int nCmdShow)
 {
-	sizei screenSize(1024, 768);
+	sizei screenSize(800, 600);
 	g_screenSize = &screenSize;
 
 	if (!GFX::init("perrotiled", screenSize, false))
@@ -88,6 +88,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	state perroInt;
 	vectorf perroAcc(0.0f, g);
 	collision::info perroCollides;
+	f32 perroAngle = 0.0f;
 	ui32 perroFrame = 0;
 	bool perroFlip = false;
 	f32 perroAnimTime = -1.0f;
@@ -104,6 +105,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	state rubyInt;
 	vectorf rubyAcc(0, g);
 	collision::info rubyCollides;
+	f32 rubyAngle = 0.0f;
 	ui32 rubyFrame = 0;
 	bool rubyFlip = false;
 	f32 rubyAnimTime = -1.0f;
@@ -130,6 +132,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 	bool keyCtrlPressed = false;
 	bool keySpacePressed = false;
+	bool keyF12Pressed = false;
 
 	// loop
 
@@ -186,6 +189,7 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 			if (perroKickedTime > kMaxKickedTime)
 			{
+				perroAngle = 0.0f;
 				perroCur.velocity.x = 0.0f;
 
 				if (perroCollides.bottom() && glfwGetKey(GLFW_KEY_UP))
@@ -238,9 +242,14 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 					keyCtrlPressed = false;
 				}
 			}
-			else if (perroCollides.bottom())
+			else
 			{
-				perroKickedVel.x = perroKickedVel.x * 0.99;
+				perroAngle = 10.0f * (perroKickedVel.x > 0.0f ? -1.0f : 1.0f);
+
+				if (perroCollides.bottom())
+				{
+					perroKickedVel.x = perroKickedVel.x * 0.99f;
+				}
 			}
 
 			if (perroCollides.right() || perroCollides.left())
@@ -287,8 +296,15 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 				rubyCollided = true;
 			}
 
+			if (rubyCollides.left() || rubyCollides.right())
+			{
+				rubyKickedTime = kMaxKickedTime + 1.0f;
+			}
+
 			if (rubyKickedTime > kMaxKickedTime)
 			{
+				rubyAngle = 0.0f;
+
 				rectf rcPerro = boundingBox(TX::PerroFrames, perroCur.position);
 				rectf rcRuby = boundingBox(TX::Ruby, rubyCur.position);
 
@@ -311,13 +327,11 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 				{
 					rubyWillJump = true;
 					rubyWillJumpDirection = rand() % 10 < 7 ? kRight : kLeft;
-					rubyKickedTime = kMaxKickedTime + 1.0f;
 				}
 				else if (rubyCollides.left())
 				{
 					rubyWillJump = true;
 					rubyWillJumpDirection = rand() % 10 < 7 ? kLeft : kRight;
-					rubyKickedTime = kMaxKickedTime + 1.0f;
 				}
 
 				if (rubyAiTime >= 1.0f && !rubyIsKicking)
@@ -373,9 +387,11 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 			}
 			else
 			{
+				rubyAngle = 10.0f * (rubyKickedVel.x > 0.0f ? -1.0f : 1.0f);
+
 				if (rubyCollides.bottom())
 				{
-					rubyKickedVel.x = rubyKickedVel.x * 0.99;
+					rubyKickedVel.x = rubyKickedVel.x * 0.99f;
 				}
 
 				rubyIsKicking = false;
@@ -616,10 +632,24 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 
 		drawMap(mapOffset);
 
-		GFX::drawTiledSprite(TX::Ruby, rubyFrame, rubyInt.position.x - mapOffset.x, rubyInt.position.y - mapOffset.y, 0.0f, 1.0f, rubyFlip);
-		GFX::drawTiledSprite(TX::PerroFrames, perroFrame, perroInt.position.x - mapOffset.x, perroInt.position.y - mapOffset.y, 0.0f, 1.0f, perroFlip);
+		GFX::drawTiledSprite(TX::Ruby, rubyFrame, rubyInt.position.x - mapOffset.x, rubyInt.position.y - mapOffset.y, rubyAngle, 1.0f, rubyFlip);
+		GFX::drawTiledSprite(TX::PerroFrames, perroFrame, perroInt.position.x - mapOffset.x, perroInt.position.y - mapOffset.y, perroAngle, 1.0f, perroFlip);
 
 		glfwSwapBuffers();
+
+		if (glfwGetKey(GLFW_KEY_F12))
+		{
+			if (!keyF12Pressed)
+			{
+				GFX::screenshot();
+			}
+
+			keyF12Pressed = true;
+		}
+		else
+		{
+			keyF12Pressed = false;
+		}
 
 		frameCount++;
 	}
