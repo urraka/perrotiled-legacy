@@ -588,40 +588,6 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 		cameraInt.position.x = floorf(cameraCur.position.x * alpha + cameraPrev.position.x * (1.0f - alpha));
 		cameraInt.position.y = floorf(cameraCur.position.y * alpha + cameraPrev.position.y * (1.0f - alpha));
 
-
-		/*
-		// frame interpolation with no floor
-
-		perroInt.position.x = (perroCur.position.x * alpha + perroPrev.position.x * (1.0f - alpha));
-		perroInt.position.y = (perroCur.position.y * alpha + perroPrev.position.y * (1.0f - alpha));
-
-		rubyInt.position.x = (rubyCur.position.x * alpha + rubyPrev.position.x * (1.0f - alpha));
-		rubyInt.position.y = (rubyCur.position.y * alpha + rubyPrev.position.y * (1.0f - alpha));
-
-		cameraInt.position.x = (cameraCur.position.x * alpha + cameraPrev.position.x * (1.0f - alpha));
-		cameraInt.position.y = (cameraCur.position.y * alpha + cameraPrev.position.y * (1.0f - alpha));
-		*/
-
-		/*
-		// no interpolation
-
-		perroInt.position.x = floorf(perroCur.position.x);
-		perroInt.position.y = floorf(perroCur.position.y);
-		rubyInt.position.x = floorf(rubyCur.position.x);
-		rubyInt.position.y = floorf(rubyCur.position.y);
-		cameraInt.position.x = floorf(cameraCur.position.x);
-		cameraInt.position.y = floorf(cameraCur.position.y);
-
-		// no interpolation & no floor
-
-		perroInt.position.x = (perroCur.position.x);
-		perroInt.position.y = (perroCur.position.y);
-		rubyInt.position.x = (rubyCur.position.x);
-		rubyInt.position.y = (rubyCur.position.y);
-		cameraInt.position.x = (cameraCur.position.x);
-		cameraInt.position.y = (cameraCur.position.y);
-		*/
-
 		// render
 
 		glClear(GL_COLOR_BUFFER_BIT);
