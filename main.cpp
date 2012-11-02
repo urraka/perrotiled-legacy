@@ -56,7 +56,7 @@ void GLFWCALL windowResize(int width, int height);
 
 int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __in LPSTR lpCmdLine, __in int nCmdShow)
 {
-	sizei screenSize(800, 600);
+	sizei screenSize(1280, 720);
 	g_screenSize = &screenSize;
 
 	if (!GFX::init("perrotiled", screenSize, false))
@@ -148,6 +148,18 @@ int CALLBACK WinMain(__in HINSTANCE hInstance, __in HINSTANCE hPrevInstance, __i
 	ui32 stepCount = 0;
 	f64 startTime = glfwGetTime();
 	f64 totalTime = 0.0;
+
+	while (true)
+	{
+		glClear(GL_COLOR_BUFFER_BIT);
+
+		if (glfwGetKey(GLFW_KEY_ENTER))
+		{
+			break;
+		}
+
+		glfwSwapBuffers();
+	}
 
 	while (running)
 	{
